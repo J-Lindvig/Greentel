@@ -1,4 +1,4 @@
-# Greental
+# Greentel
 
 Work-In-Progress integration til at trække data ud fra Greentel.
 
