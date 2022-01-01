@@ -42,6 +42,7 @@ class SubscriptionSensor(Entity):
 		self._hass = hass
 		self._coordinator = coordinator
 		self._subscription = subscription
+		self._client = hass.data[DOMAIN]["client"]
 
 	@property
 	def name(self) -> str:
@@ -49,7 +50,8 @@ class SubscriptionSensor(Entity):
 		if len(self._subscription['Users']) > 1:
 			name +=  " " + self._subscription['Name']
 		else:
-			name +=  " " + str(self._subscription['Users'][0])
+			name = str(self._subscription['Users'][0])
+
 		return name
 
 	@property
@@ -71,6 +73,16 @@ class SubscriptionSensor(Entity):
 	@property
 	def extra_state_attributes(self):
 		attributes = { ATTR_ATTRIBUTION: ATTRIBUTION }
+
+		attributes['Users'] = []
+		for phoneNo in self._subscription['Users']:
+			attributes['Users'].append( { "Username": self._client._subscribers[phoneNo], "PhoneNumber": phoneNo} )
+
+		phoneNo = self._subscription['Users'][0]
+		if len(self._subscription['Users']) == 1 and phoneNo in self._client._consumptionPackageUser:
+			for key in self._client._consumptionPackageUser[phoneNo]:
+				attributes[key] = self._client._consumptionPackageUser[phoneNo][key]
+
 		return attributes
 
 	@property
