@@ -6,6 +6,7 @@ async def async_setup(hass, config):
     if conf is None:
         return True
 
+    # Initialize the Client
     client  = greentelClient(conf.get('phonenumber'), conf.get('password'))
     hass.data[DOMAIN] = {
         "client": client
