@@ -6,5 +6,5 @@
 		"codeowners": ["Jacob Lindvig Henriksen"],
 		"requirements": ["beautifulsoup4", "html.parser"],
 		"iot_class": "cloud_polling",
-		"version": "0.4"
+		"version": "0.4.3"
 	}

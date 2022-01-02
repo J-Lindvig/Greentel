@@ -26,11 +26,11 @@ class greentelClient:
 		self._session = None
 		self._phoneNo = phoneNo
 		self._password = password
-		self._token = None
-		self._subscriptions = []
-		self._subscribers = {}
-		self._consumptionPackage = {}
-		self._consumptionPackageUser = {}
+#		self._token = None
+#		self._subscriptions = []
+#		self._subscribers = {}
+#		self._consumptionPackage = {}
+#		self._consumptionPackageUser = {}
 
 	# Repeated function testing if the reponse is OK
 	# Returns boolean
@@ -47,6 +47,8 @@ class greentelClient:
 
 	# Login, what else...
 	def login(self):
+		self._token = None
+
 		# Prepare a new session and get the webpage with the login form (BASE_URL)
 		self._session = requests.Session()
 		url = BASE_URL
@@ -100,6 +102,9 @@ class greentelClient:
 
 	# Retrieve all our subscriptions and the users attached to the subscription
 	def _getSubscriptions(self):
+		self._subscriptions = []
+		self._subscribers = {}
+
 		# Prepare the payload and GET the response
 		response = self._getStartPage()
 
@@ -133,6 +138,8 @@ class greentelClient:
 
 	# Get the total consumption in the package
 	def _getConsumptionPackage(self):
+		self._consumptionPackage = {}
+
 		# Prepare and POST the payload
 		payload = { 'PageId': GET_INFO_PAGE_ID, 'Token': self._token, 'PhoneNo': '' }
 		response = self._session.post(BASE_URL + GET_PACKAGE_PAGE_URL, data = payload).json()
@@ -154,6 +161,8 @@ class greentelClient:
 	# Get a users consumption in the current month
 	# Supply the phonenumber of the user
 	def _getConsumptionUser(self, phoneNo):
+		self._consumptionPackageUser = {}
+
 		# Prepare some DATE variables for the payload
 		now = datetime.datetime.now()
 		year = now.strftime("%Y")

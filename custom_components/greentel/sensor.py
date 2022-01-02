@@ -1,25 +1,26 @@
+import logging
+
 from .const import DOMAIN, ATTRIBUTION
 from homeassistant.const import DEVICE_CLASS_MONETARY, ATTR_ATTRIBUTION
-import logging
 
 from datetime import datetime, timedelta
 
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.restore_state import RestoreEntity
+#from homeassistant.helpers.entity import Entity
+#from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+async def async_setup_platform(hass, config, async_add_entities, discovery_info = None):
 	"""Setup sensor platform"""
 
 	async def async_update_data():
-		#try:
-		client = hass.data[DOMAIN]["client"]
-		await hass.async_add_executor_job(client.getData)
-		#except Exception as e:
-		#    raise UpdateFailed(f"Error communicating with server: {e}")
+		try:
+			client = hass.data[DOMAIN]["client"]
+			await hass.async_add_executor_job(client.getData)
+		except Exception as e:
+			raise UpdateFailed(f"Error communicating with server: {e}")
 
 	coordinator = DataUpdateCoordinator(
 		hass,
