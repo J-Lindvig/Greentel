@@ -56,7 +56,7 @@ class greentelClient:
 		"""
 		html = BeautifulSoup(response.text, "html.parser")
 		payload = {INPUT_TOKEN_NAME: '', 'PhoneNo': self._phoneNo, 'Password': self._password }
-		url = url + html.form['action']
+		url += html.form['action']
 		for input in html.find_all('input'):
 			if (input.has_attr('name') and input['name'] == INPUT_TOKEN_NAME):
 				payload[INPUT_TOKEN_NAME] = input['value']
@@ -71,7 +71,6 @@ class greentelClient:
 		payload = { 'PageId': GET_INFO_PAGE_ID }
 		response = self._session.get(BASE_URL + GET_INFO_PAGE_URL, params = payload).json()
 		if self._responseOK(response):
-#		if response[SUCCESS_STR] and len(response[DATA_STR]) > 0:
 			self._token = response[DATA_STR][0][TOKEN_STR]
 			return True
 
@@ -83,7 +82,7 @@ class greentelClient:
 		# Call the subfunctions and extract the data
 		self._getSubscriptions()
 		self._getConsumptionPackage()
-#        self._getConsumptionAllUsers()
+		self._getConsumptionAllUsers()
 
 	# Retrieve all our subscriptions and the users attached to the subscription
 	def _getSubscriptions(self):
@@ -128,8 +127,11 @@ class greentelClient:
 		if self._responseOK(response):
 			# Loop through the different elements of consumption
 			for group in response['Data']['Consumption']:
-				# Extract the name and uppercase the first char
-				groupName = group['TextGauge'].split()[0].title()
+				# Extract the name
+				groupName = group['TextGauge'].split()[0]
+				# If the name is more than 3 chars, uppercase the first
+				if len(groupName) > 3:
+					groupName = groupName.title()
 				# Prepare a dictionary for the group
 				self._consumptionPackage[groupName] = {}
 				# Extract the fields and populate the dictionary

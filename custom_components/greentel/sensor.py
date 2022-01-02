@@ -1,5 +1,5 @@
-from .const import DOMAIN
-from homeassistant.const import DEVICE_CLASS_MONETARY
+from .const import DOMAIN, ATTRIBUTION
+from homeassistant.const import DEVICE_CLASS_MONETARY, ATTR_ATTRIBUTION
 import logging
 
 from datetime import datetime, timedelta
@@ -42,12 +42,17 @@ class SubscriptionSensor(Entity):
 		self._hass = hass
 		self._coordinator = coordinator
 		self._subscription = subscription
-		# Make a unique_id of the DOMAIN_PHONENUMBER
-		self._unique_id = DOMAIN + "_" + str(self._subscription['Users'][0])
+		self._client = hass.data[DOMAIN]["client"]
 
 	@property
 	def name(self) -> str:
-		return DOMAIN + " " + self._subscription['Name']
+		name = DOMAIN
+		if len(self._subscription['Users']) > 1:
+			name +=  " " + self._subscription['Name']
+		else:
+			name = str(self._subscription['Users'][0])
+
+		return name
 
 	@property
 	def state(self):
@@ -59,11 +64,26 @@ class SubscriptionSensor(Entity):
 
 	@property
 	def unique_id(self):
-		return self._unique_id
+		return DOMAIN + "_" + str(self._subscription['Users'][0])
 
 	@property
 	def device_class(self) -> str:
 		return DEVICE_CLASS_MONETARY
+
+	@property
+	def extra_state_attributes(self):
+		attributes = { ATTR_ATTRIBUTION: ATTRIBUTION }
+
+		attributes['Users'] = []
+		for phoneNo in self._subscription['Users']:
+			attributes['Users'].append( { "Username": self._client._subscribers[phoneNo], "PhoneNumber": phoneNo} )
+
+		phoneNo = self._subscription['Users'][0]
+		if len(self._subscription['Users']) == 1 and phoneNo in self._client._consumptionPackageUser:
+			for key in self._client._consumptionPackageUser[phoneNo]:
+				attributes[key] = self._client._consumptionPackageUser[phoneNo][key]
+
+		return attributes
 
 	@property
 	def should_poll(self):

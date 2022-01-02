@@ -1,5 +1,6 @@
 # Home Assistant constants
 DOMAIN = "greentel"
+ATTRIBUTION = "Data provided by greentel.dk"
 
 # Greentel Client constants
 BASE_URL = 'https://www.greentel.dk'
