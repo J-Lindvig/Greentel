@@ -25,7 +25,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 		_LOGGER,
 		name = "sensor",
 		update_method = async_update_data,
-		update_interval = timedelta(minutes = 60)
+		update_interval = timedelta(minutes = 5)
 	)
 
 	# Immediate refresh
