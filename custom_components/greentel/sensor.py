@@ -1,6 +1,6 @@
 import logging
 
-from .const import DOMAIN, ATTRIBUTION
+from .const import DOMAIN, ATTRIBUTION, STR_USED
 from homeassistant.const import DEVICE_CLASS_MONETARY, ATTR_ATTRIBUTION
 
 from datetime import datetime, timedelta
@@ -9,6 +9,8 @@ from homeassistant.components.sensor import SensorEntity
 #from homeassistant.helpers.entity import Entity
 #from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+_LOGGER: logging.Logger = logging.getLogger(__package__)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -80,10 +82,18 @@ class SubscriptionSensor(SensorEntity):
 		for phoneNo in self._subscription['Users']:
 			attributes['Users'].append( { "Username": self._client._subscribers[phoneNo], "PhoneNumber": phoneNo} )
 
-		phoneNo = self._subscription['Users'][0]
-		if len(self._subscription['Users']) == 1 and phoneNo in self._client._consumptionPackageUser:
-			for key in self._client._consumptionPackageUser[phoneNo]:
-				attributes[key] = self._client._consumptionPackageUser[phoneNo][key]
+		# phoneNo = self._subscription['Users'][0]
+		# if len(self._subscription['Users']) == 1 and phoneNo in self._client._consumptionPackageUser:
+		# 	for key in self._client._consumptionPackageUser[phoneNo]:
+		# 		attributes[key] = self._client._consumptionPackageUser[phoneNo][key]
+
+		for phoneNo in self._subscription['Users']:
+			if phoneNo in self._client._consumptionPackageUser:
+				for key in self._client._consumptionPackageUser[phoneNo]:
+					newKey = key + STR_USED
+					if newKey not in attributes:
+						attributes[newKey] = 0
+					attributes[newKey] += self._client._consumptionPackageUser[phoneNo][key]
 
 		return attributes
 

@@ -1,10 +1,12 @@
 # Imports
+import logging
+
 import requests                 # Perform http/https requests
 from bs4 import BeautifulSoup   # Parse HTML pages
 import json                     # Needed to print JSON API data
 import datetime
 import calendar
-import logging
+
 from .const import (
 	BASE_URL,
 	GET_INFO_PAGE_URL,
@@ -17,7 +19,10 @@ from .const import (
 	SUCCESS_STR,
 	TOKEN_STR,
 	GROUP_FIELDS,
+	GROUPNAME_TALK,
 )
+
+_LOGGER: logging.Logger = logging.getLogger(__package__)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,33 +31,18 @@ class greentelClient:
 		self._session = None
 		self._phoneNo = phoneNo
 		self._password = password
-#		self._token = None
-#		self._subscriptions = []
-#		self._subscribers = {}
-#		self._consumptionPackage = {}
-#		self._consumptionPackageUser = {}
-
-	# Repeated function testing if the reponse is OK
-	# Returns boolean
-	def _responseOK(self, response):
-		if SUCCESS_STR in response and DATA_STR in response:
-			return response[SUCCESS_STR] and len(response[DATA_STR]) > 0
-		return False
-
-	# Repeated request to the startpage
-	# Returns the response
-	def _getStartPage(self):
-		payload = { 'PageId': GET_INFO_PAGE_ID }
-		return self._session.get(BASE_URL + GET_INFO_PAGE_URL, params = payload).json()
+		self._token = None
+		self._subscriptions = []
+		self._subscribers = {}
+		self._consumptionPackage = {}
+		self._consumptionPackageUser = {}
+		_LOGGER.debug("Init OK")
 
 	# Login, what else...
 	def login(self):
-		self._token = None
-
 		# Prepare a new session and get the webpage with the login form (BASE_URL)
 		self._session = requests.Session()
-		url = BASE_URL
-		response = self._session.get(url)
+		response = self._session.get(BASE_URL)
 
 		"""
 		Parse the HTML code.
@@ -67,11 +57,11 @@ class greentelClient:
 		"""
 		html = BeautifulSoup(response.text, "html.parser")
 		payload = {INPUT_TOKEN_NAME: '', 'PhoneNo': self._phoneNo, 'Password': self._password }
-		url += html.form['action']
 		for input in html.find_all('input'):
 			if (input.has_attr('name') and input['name'] == INPUT_TOKEN_NAME):
 				payload[INPUT_TOKEN_NAME] = input['value']
 				break
+		url = BASE_URL + html.form['action']
 		response = self._session.post(url, data = payload)
 
 		"""
@@ -82,15 +72,13 @@ class greentelClient:
 		response = self._getStartPage()
 		if self._responseOK(response):
 			self._token = response[DATA_STR][0][TOKEN_STR]
-			_LOGGER.debug("Login OK, Token:" + self._token)
 			return True
-		_LOGGER.debug("Login Failed...")
 
 	def getData(self):
 		loggedIn = False
 		if self._session:
 			response = self._getStartPage()
-			loggedIn = response["SUCCESS_STR"]
+			loggedIn = response[SUCCESS_STR]
 
 		if not loggedIn:
 			self.login()
@@ -100,11 +88,23 @@ class greentelClient:
 		self._getConsumptionPackage()
 		self._getConsumptionAllUsers()
 
+		return True
+
+	# Repeated function testing if the reponse is OK
+	# Returns boolean
+	def _responseOK(self, response):
+		if SUCCESS_STR in response and DATA_STR in response:
+			return response[SUCCESS_STR] and len(response[DATA_STR]) > 0
+		return False
+
+	# Repeated request to the startpage
+	# Returns the response
+	def _getStartPage(self):
+		payload = { 'PageId': GET_INFO_PAGE_ID }
+		return self._session.get(BASE_URL + GET_INFO_PAGE_URL, params = payload).json()
+
 	# Retrieve all our subscriptions and the users attached to the subscription
 	def _getSubscriptions(self):
-		self._subscriptions = []
-		self._subscribers = {}
-
 		# Prepare the payload and GET the response
 		response = self._getStartPage()
 
@@ -138,8 +138,6 @@ class greentelClient:
 
 	# Get the total consumption in the package
 	def _getConsumptionPackage(self):
-		self._consumptionPackage = {}
-
 		# Prepare and POST the payload
 		payload = { 'PageId': GET_INFO_PAGE_ID, 'Token': self._token, 'PhoneNo': '' }
 		response = self._session.post(BASE_URL + GET_PACKAGE_PAGE_URL, data = payload).json()
@@ -161,8 +159,6 @@ class greentelClient:
 	# Get a users consumption in the current month
 	# Supply the phonenumber of the user
 	def _getConsumptionUser(self, phoneNo):
-		self._consumptionPackageUser = {}
-
 		# Prepare some DATE variables for the payload
 		now = datetime.datetime.now()
 		year = now.strftime("%Y")
@@ -193,7 +189,7 @@ class greentelClient:
 					# If the consumption is Voice, then overrule the name and
 					# convert the HH:MM:SS to seconds
 					if groupName == 'Opkald og samtaler':
-						groupName = 'Tale'
+						groupName = GROUPNAME_TALK
 						QtySplit = Qty.split(':')
 						Qty = (int(QtySplit[0]) * 3600) + (int(QtySplit[1]) * 60) + int(QtySplit[2])
 					# Add the quantity of the consumption to the user

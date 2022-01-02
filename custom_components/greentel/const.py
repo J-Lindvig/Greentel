@@ -1,6 +1,7 @@
 # Home Assistant constants
 DOMAIN = "greentel"
 ATTRIBUTION = "Data provided by greentel.dk"
+STR_USED = '_used'
 
 # Greentel Client constants
 BASE_URL = 'https://www.greentel.dk'
@@ -16,3 +17,4 @@ DATA_STR = 'Data'
 SUCCESS_STR = 'Success'
 TOKEN_STR = 'Token'
 GROUP_FIELDS = ['AmountTotal', 'AmountLeft', 'AmountUsed', 'UnitGauge', 'FreeConsumption']
+GROUPNAME_TALK = 'Talk'
