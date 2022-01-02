@@ -33,8 +33,17 @@ class greentelClient:
 		self._consumptionPackageUser = {}
 
 	# Repeated function testing if the reponse is OK
+	# Returns boolean
 	def _responseOK(self, response):
-		return (response[SUCCESS_STR] and len(response[DATA_STR]) > 0)
+		if SUCCESS_STR in response and DATA_STR in response:
+			return response[SUCCESS_STR] and len(response[DATA_STR]) > 0
+		return False
+
+	# Repeated request to the startpage
+	# Returns the response
+	def _getStartPage(self):
+		payload = { 'PageId': GET_INFO_PAGE_ID }
+		return self._session.get(BASE_URL + GET_INFO_PAGE_URL, params = payload).json()
 
 	# Login, what else...
 	def login(self):
@@ -68,15 +77,20 @@ class greentelClient:
 		GET the response from the payload
 		If the response is successful, store the token anf return true
 		"""
-		payload = { 'PageId': GET_INFO_PAGE_ID }
-		response = self._session.get(BASE_URL + GET_INFO_PAGE_URL, params = payload).json()
+		response = self._getStartPage()
 		if self._responseOK(response):
 			self._token = response[DATA_STR][0][TOKEN_STR]
+			_LOGGER.debug("Login OK, Token:" + self._token)
 			return True
+		_LOGGER.debug("Login Failed...")
 
 	def getData(self):
-		# If the token is not set, then login
-		if not self._token:
+		loggedIn = False
+		if self._session:
+			response = self._getStartPage()
+			loggedIn = response["SUCCESS_STR"]
+
+		if not loggedIn:
 			self.login()
 
 		# Call the subfunctions and extract the data
@@ -87,8 +101,7 @@ class greentelClient:
 	# Retrieve all our subscriptions and the users attached to the subscription
 	def _getSubscriptions(self):
 		# Prepare the payload and GET the response
-		payload = { 'PageId': GET_INFO_PAGE_ID }
-		response = self._session.get(BASE_URL + GET_INFO_PAGE_URL, params = payload).json()
+		response = self._getStartPage()
 
 		if self._responseOK(response):
 			# Prepare a dict of uniqueId of subscritions and a placeholder for the current index.

@@ -4,6 +4,7 @@ import logging
 
 from datetime import datetime, timedelta
 
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -37,7 +38,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 		entities.append(SubscriptionSensor(hass, coordinator, subscription))
 	async_add_entities(entities)
 
-class SubscriptionSensor(Entity):
+class SubscriptionSensor(SensorEntity):
 	def __init__(self, hass, coordinator, subscription) -> None:
 		self._hass = hass
 		self._coordinator = coordinator
