@@ -1,16 +1,22 @@
 import logging
 
 from .const import (
+	CONF_CLIENT,
+	CONF_PLATFORM,
+	CONF_SEPARATE_DATA_SENSORS,
 	DOMAIN,
 	UPDATE_INTERVAL,
 	HA_ATTRIBUTION,
 	HA_PHONENUMBER,
 	HA_SPACE,
+	HA_TOTAL,
+	HA_UNIT_OF_MEASUREMENT_DATA,
 	HA_UNIT_OF_MEASUREMENT_SUBSCRIPTION,
 	HA_USED,
 	HA_USERNAME,
 	HA_USERS,
 	R_BALANCE,
+	R_DATA,
 	R_PHONENUMBER,
 	R_USERNAME,
 	STR_NAME,
@@ -33,7 +39,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info 
 
 	async def async_update_data():
 		# try:
-		client = hass.data[DOMAIN]["client"]
+		client = hass.data[DOMAIN][CONF_CLIENT]
 		await hass.async_add_executor_job(client.getData)
 		# except Exception as e:
 		# 	raise UpdateFailed(f"Error communicating with server: {e}")
@@ -41,7 +47,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info 
 	coordinator = DataUpdateCoordinator(
 		hass,
 		_LOGGER,
-		name = "sensor",
+		name = CONF_PLATFORM,
 		update_method = async_update_data,
 		update_interval = timedelta(minutes = UPDATE_INTERVAL)
 	)
@@ -49,10 +55,17 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info 
 	# Immediate refresh
 	await coordinator.async_request_refresh()
 
+	# Add the sensors
+	client = hass.data[DOMAIN][CONF_CLIENT]
 	entities = []
-	client = hass.data[DOMAIN]["client"]
+	
 	for subscription in client._subscriptions:
 		entities.append(SubscriptionSensor(hass, coordinator, subscription))
+
+	if hass.data[DOMAIN][CONF_SEPARATE_DATA_SENSORS]:
+		for phoneNo in client._packageAndConsumption:
+			entities.append(DataSensor(hass, coordinator, phoneNo))
+
 	async_add_entities(entities)
 
 class SubscriptionSensor(SensorEntity):
@@ -60,16 +73,15 @@ class SubscriptionSensor(SensorEntity):
 		self._hass = hass
 		self._coordinator = coordinator
 		self._subscription = subscription
-		self._client = hass.data[DOMAIN]["client"]
+		self._client = hass.data[DOMAIN][CONF_CLIENT]
 
 	@property
 	def name(self) -> str:
-		name = DOMAIN
+		name = DOMAIN + HA_SPACE
 		if len(self._subscription[STR_USERS]) > 1:
-			name +=  HA_SPACE + self._subscription[STR_NAME]
+			name +=  self._subscription[STR_NAME]
 		else:
-			name = str(self._subscription[STR_USERS][0][R_PHONENUMBER])
-
+			name += str(self._subscription[STR_USERS][0][R_PHONENUMBER])
 		return name
 
 	@property
@@ -82,7 +94,7 @@ class SubscriptionSensor(SensorEntity):
 
 	@property
 	def unique_id(self):
-		return DOMAIN + "_" + str(self._subscription[STR_USERS][0])
+		return DOMAIN + "_" + str(self._subscription[STR_USERS][0][R_PHONENUMBER])
 
 	@property
 	def device_class(self) -> str:
@@ -98,7 +110,7 @@ class SubscriptionSensor(SensorEntity):
 			phoneNo = user[R_PHONENUMBER]
 			attr[HA_USERS].append( { HA_USERNAME: user[R_USERNAME], HA_PHONENUMBER: phoneNo} )
 			for key in self._client._packageAndConsumption[phoneNo][STR_USED]:
-				newKey = key + HA_SPACE + HA_USED
+				newKey = (key + HA_SPACE + HA_USED).lower()
 				if newKey not in attr:
 					attr[newKey] = 0
 				attr[newKey] += self._client._packageAndConsumption[phoneNo][STR_USED][key]
@@ -106,7 +118,69 @@ class SubscriptionSensor(SensorEntity):
 		# Extract Package info from the first User
 		phoneNo = self._subscription[STR_USERS][0][R_PHONENUMBER]
 		for key in self._client._packageAndConsumption[phoneNo][STR_PACKAGE]:
-			attr[key] = self._client._packageAndConsumption[phoneNo][STR_PACKAGE][key]
+			attr[(key + HA_SPACE + HA_TOTAL).lower()] = self._client._packageAndConsumption[phoneNo][STR_PACKAGE][key]
+
+		return attr
+
+	@property
+	def should_poll(self):
+		"""No need to poll. Coordinator notifies entity of updates."""
+		return False
+
+	@property
+	def available(self):
+		"""Return if entity is available."""
+		return self._coordinator.last_update_success
+
+	async def async_update(self):
+		"""Update the entity. Only used by the generic entity update service."""
+		await self._coordinator.async_request_refresh()
+
+	async def async_added_to_hass(self):
+		"""When entity is added to hass."""
+		self.async_on_remove(
+			self._coordinator.async_add_listener(
+				self.async_write_ha_state
+			)
+		)
+
+class DataSensor(SensorEntity):
+	def __init__(self, hass, coordinator, phoneNo) -> None:
+		self._hass = hass
+		self._coordinator = coordinator
+		self._phoneNo = phoneNo
+		self._client = hass.data[DOMAIN][CONF_CLIENT]
+		self._name = DOMAIN + HA_SPACE + str(self._phoneNo) + HA_SPACE + R_DATA + HA_SPACE + HA_USED
+		self._state = 0
+		self._total = 0
+		if R_DATA in self._client._packageAndConsumption[self._phoneNo][STR_USED]:
+			self._state = self._client._packageAndConsumption[self._phoneNo][STR_USED][R_DATA]
+			_LOGGER.debug("[Data] : " + str(self._state))
+		if R_DATA in self._client._packageAndConsumption[self._phoneNo][STR_PACKAGE]:
+			self._total = self._client._packageAndConsumption[self._phoneNo][STR_PACKAGE][R_DATA]
+			_LOGGER.debug("[Total] : " + str(self._total))
+
+	@property
+	def name(self) -> str:
+		return self._name
+
+	@property
+	def state(self):
+		return self._state
+
+	@property
+	def unit_of_measurement(self) -> str:
+		return HA_UNIT_OF_MEASUREMENT_DATA
+
+	@property
+	def unique_id(self):
+		return self._name
+
+	@property
+	def extra_state_attributes(self):
+		# Prepare a dictionary with attributes
+		attr = { ATTR_ATTRIBUTION: HA_ATTRIBUTION }
+		attr[(R_DATA + HA_SPACE + HA_TOTAL).lower()] = self._total
 
 		return attr
 

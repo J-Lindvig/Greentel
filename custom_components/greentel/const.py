@@ -1,5 +1,10 @@
 # Home Assistant constants
-DOMAIN = "greentel"
+CONF_CLIENT = 'client'
+CONF_PASSWORD = 'password'
+CONF_PHONENUMBER = 'phonenumber'
+CONF_PLATFORM = 'sensor'
+CONF_SEPARATE_DATA_SENSORS = 'separate_data_sensors'
+DOMAIN = 'greentel'
 UPDATE_INTERVAL = 5
 
 # Home Assistant Key, Values and Strings
@@ -7,6 +12,7 @@ HA_ATTRIBUTION = 'Data provided by greentel.dk'
 HA_PHONENUMBER = 'phonenumber'
 HA_SPACE = ' '
 HA_TOTAL = 'total'
+HA_UNIT_OF_MEASUREMENT_DATA = 'MB'
 HA_UNIT_OF_MEASUREMENT_SUBSCRIPTION = 'kroner'
 HA_USED = 'used'
 HA_USERNAME = 'username'
