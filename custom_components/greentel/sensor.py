@@ -1,35 +1,49 @@
 import logging
 
-from .const import DOMAIN, ATTRIBUTION, STR_USED
+from .const import (
+	DOMAIN,
+	UPDATE_INTERVAL,
+	HA_ATTRIBUTION,
+	HA_PHONENUMBER,
+	HA_SPACE,
+	HA_UNIT_OF_MEASUREMENT_SUBSCRIPTION,
+	HA_USED,
+	HA_USERNAME,
+	HA_USERS,
+	R_BALANCE,
+	R_PHONENUMBER,
+	R_USERNAME,
+	STR_NAME,
+	STR_PACKAGE,
+	STR_USERS,
+	STR_USED,
+)
 from homeassistant.const import DEVICE_CLASS_MONETARY, ATTR_ATTRIBUTION
 
 from datetime import datetime, timedelta
 
 from homeassistant.components.sensor import SensorEntity
-#from homeassistant.helpers.entity import Entity
-#from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
-
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info = None):
 	"""Setup sensor platform"""
 
 	async def async_update_data():
-		try:
-			client = hass.data[DOMAIN]["client"]
-			await hass.async_add_executor_job(client.getData)
-		except Exception as e:
-			raise UpdateFailed(f"Error communicating with server: {e}")
+		# try:
+		client = hass.data[DOMAIN]["client"]
+		await hass.async_add_executor_job(client.getData)
+		# except Exception as e:
+		# 	raise UpdateFailed(f"Error communicating with server: {e}")
 
 	coordinator = DataUpdateCoordinator(
 		hass,
 		_LOGGER,
 		name = "sensor",
 		update_method = async_update_data,
-		update_interval = timedelta(minutes = 5)
+		update_interval = timedelta(minutes = UPDATE_INTERVAL)
 	)
 
 	# Immediate refresh
@@ -51,24 +65,24 @@ class SubscriptionSensor(SensorEntity):
 	@property
 	def name(self) -> str:
 		name = DOMAIN
-		if len(self._subscription['Users']) > 1:
-			name +=  " " + self._subscription['Name']
+		if len(self._subscription[STR_USERS]) > 1:
+			name +=  HA_SPACE + self._subscription[STR_NAME]
 		else:
-			name = str(self._subscription['Users'][0])
+			name = str(self._subscription[STR_USERS][0][R_PHONENUMBER])
 
 		return name
 
 	@property
 	def state(self):
-		return self._subscription['Balance']
+		return self._subscription[R_BALANCE]
 
 	@property
 	def unit_of_measurement(self) -> str:
-		return 'kroner'
+		return HA_UNIT_OF_MEASUREMENT_SUBSCRIPTION
 
 	@property
 	def unique_id(self):
-		return DOMAIN + "_" + str(self._subscription['Users'][0])
+		return DOMAIN + "_" + str(self._subscription[STR_USERS][0])
 
 	@property
 	def device_class(self) -> str:
@@ -76,26 +90,25 @@ class SubscriptionSensor(SensorEntity):
 
 	@property
 	def extra_state_attributes(self):
-		attributes = { ATTR_ATTRIBUTION: ATTRIBUTION }
+		# Prepare a dictionary with attributes
+		attr = { ATTR_ATTRIBUTION: HA_ATTRIBUTION, HA_USERS: [] }
 
-		attributes['Users'] = []
-		for phoneNo in self._subscription['Users']:
-			attributes['Users'].append( { "Username": self._client._subscribers[phoneNo], "PhoneNumber": phoneNo} )
+		# Extract Username, Phonenumber and Consumption from the subscription
+		for user in self._subscription[STR_USERS]:
+			phoneNo = user[R_PHONENUMBER]
+			attr[HA_USERS].append( { HA_USERNAME: user[R_USERNAME], HA_PHONENUMBER: phoneNo} )
+			for key in self._client._packageAndConsumption[phoneNo][STR_USED]:
+				newKey = key + HA_SPACE + HA_USED
+				if newKey not in attr:
+					attr[newKey] = 0
+				attr[newKey] += self._client._packageAndConsumption[phoneNo][STR_USED][key]
 
-		# phoneNo = self._subscription['Users'][0]
-		# if len(self._subscription['Users']) == 1 and phoneNo in self._client._consumptionPackageUser:
-		# 	for key in self._client._consumptionPackageUser[phoneNo]:
-		# 		attributes[key] = self._client._consumptionPackageUser[phoneNo][key]
+		# Extract Package info from the first User
+		phoneNo = self._subscription[STR_USERS][0][R_PHONENUMBER]
+		for key in self._client._packageAndConsumption[phoneNo][STR_PACKAGE]:
+			attr[key] = self._client._packageAndConsumption[phoneNo][STR_PACKAGE][key]
 
-		for phoneNo in self._subscription['Users']:
-			if phoneNo in self._client._consumptionPackageUser:
-				for key in self._client._consumptionPackageUser[phoneNo]:
-					newKey = key + STR_USED
-					if newKey not in attributes:
-						attributes[newKey] = 0
-					attributes[newKey] += self._client._consumptionPackageUser[phoneNo][key]
-
-		return attributes
+		return attr
 
 	@property
 	def should_poll(self):
