@@ -7,6 +7,7 @@ from .const import (
 	DOMAIN,
 	UPDATE_INTERVAL,
 	HA_ATTRIBUTION,
+	HA_LAST_RECORD,
 	HA_PHONENUMBER,
 	HA_SPACE,
 	HA_TOTAL,
@@ -17,6 +18,7 @@ from .const import (
 	HA_USERS,
 	R_BALANCE,
 	R_DATA,
+	R_DATE,
 	R_PHONENUMBER,
 	R_USERNAME,
 	STR_NAME,
@@ -64,7 +66,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info 
 
 	if hass.data[DOMAIN][CONF_SEPARATE_DATA_SENSORS]:
 		for phoneNo in client._packageAndConsumption:
-			entities.append(DataSensor(hass, coordinator, phoneNo))
+			entities.append(DataSensor(hass, coordinator, phoneNo, client._users[phoneNo]))
 
 	async_add_entities(entities)
 
@@ -109,6 +111,8 @@ class SubscriptionSensor(SensorEntity):
 		for user in self._subscription[STR_USERS]:
 			phoneNo = user[R_PHONENUMBER]
 			attr[HA_USERS].append( { HA_USERNAME: user[R_USERNAME], HA_PHONENUMBER: phoneNo} )
+			if R_DATE in self._client._packageAndConsumption[phoneNo]:
+				attr[HA_LAST_RECORD] = self._client._packageAndConsumption[phoneNo][R_DATE]
 			for key in self._client._packageAndConsumption[phoneNo][STR_USED]:
 				newKey = (key + HA_SPACE + HA_USED).lower()
 				if newKey not in attr:
@@ -145,20 +149,19 @@ class SubscriptionSensor(SensorEntity):
 		)
 
 class DataSensor(SensorEntity):
-	def __init__(self, hass, coordinator, phoneNo) -> None:
+	def __init__(self, hass, coordinator, phoneNo, userName = '') -> None:
 		self._hass = hass
 		self._coordinator = coordinator
 		self._phoneNo = phoneNo
+		self._userName = userName
 		self._client = hass.data[DOMAIN][CONF_CLIENT]
 		self._name = DOMAIN + HA_SPACE + str(self._phoneNo) + HA_SPACE + R_DATA + HA_SPACE + HA_USED
 		self._state = 0
 		self._total = 0
 		if R_DATA in self._client._packageAndConsumption[self._phoneNo][STR_USED]:
 			self._state = self._client._packageAndConsumption[self._phoneNo][STR_USED][R_DATA]
-			_LOGGER.debug("[Data] : " + str(self._state))
 		if R_DATA in self._client._packageAndConsumption[self._phoneNo][STR_PACKAGE]:
 			self._total = self._client._packageAndConsumption[self._phoneNo][STR_PACKAGE][R_DATA]
-			_LOGGER.debug("[Total] : " + str(self._total))
 
 	@property
 	def name(self) -> str:
@@ -181,6 +184,10 @@ class DataSensor(SensorEntity):
 		# Prepare a dictionary with attributes
 		attr = { ATTR_ATTRIBUTION: HA_ATTRIBUTION }
 		attr[(R_DATA + HA_SPACE + HA_TOTAL).lower()] = self._total
+		attr[HA_USERNAME] = self._userName
+		attr[HA_PHONENUMBER] = self._phoneNo
+		if R_DATE in self._client._packageAndConsumption[self._phoneNo]:
+			attr[(R_DATE).lower()] = self._client._packageAndConsumption[self._phoneNo][R_DATE]
 
 		return attr
 

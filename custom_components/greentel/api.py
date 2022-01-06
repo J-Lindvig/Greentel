@@ -33,6 +33,7 @@ from .const import (
 	R_PHONENUMBER,
 	R_QUANTITY,
 	R_DATA,
+	R_DATE,
 	R_DESCRIPTION,
 	R_SUBSCRIPTION,
 	R_SUBSCRIPTION_DK,
@@ -60,6 +61,7 @@ class greentelClient:
 		self._password = password
 		self._token = None
 		self._subscriptions = []
+		self._users = {}
 		self._packageAndConsumption = {}
 
 	# Login, what else...
@@ -165,6 +167,7 @@ class greentelClient:
 				idx = uniqueIdList[subscription[R_SUBSCRIPTION]]
 				self._subscriptions[idx][STR_NAME] = subscription[R_SUBSCRIPTION]
 				self._subscriptions[idx][R_BALANCE] = subscription[R_BALANCE]
+				self._users[subscription[R_PHONENUMBER]] = subscription[R_USER][R_USERNAME]
 				self._subscriptions[idx][STR_USERS].append(
 					{ R_USERNAME: subscription[R_USER][R_USERNAME], R_PHONENUMBER: subscription[R_PHONENUMBER] }
 				)
@@ -193,7 +196,6 @@ class greentelClient:
 				elif groupName == R_TALK:
 					groupName = STR_TALK
 					Qty = Qty * 3600
-#				groupName += HA_SPACE + HA_TOTAL
 
 				self._packageAndConsumption[phoneNo][STR_PACKAGE][groupName] = int(Qty)
 
@@ -229,6 +231,10 @@ class greentelClient:
 						groupName = STR_TALK
 						h, m, s = Qty.split(':')
 						Qty = int(h) * 3600 + int(m) * 60 + int(s)
+					elif groupName == R_DATA:
+						lastestDate = group[R_ITEMS][-1][R_DATE]
+						self._packageAndConsumption[phoneNo][R_DATE] = lastestDate
+						_LOGGER.debug("[lastestDate " + str(phoneNo) + " ] : " + str(lastestDate))
 
 					self._packageAndConsumption[phoneNo][STR_USED][groupName] = int(Qty)
 

@@ -9,6 +9,7 @@ UPDATE_INTERVAL = 5
 
 # Home Assistant Key, Values and Strings
 HA_ATTRIBUTION = 'Data provided by greentel.dk'
+HA_LAST_RECORD = 'last record date'
 HA_PHONENUMBER = 'phonenumber'
 HA_SPACE = ' '
 HA_TOTAL = 'total'
@@ -43,6 +44,7 @@ R_BALANCE = 'Balance'
 R_CALLS_TALKS = 'Opkald og samtaler'
 R_CONSUMPTION = 'Consumption'
 R_DATA = 'Data'
+R_DATE = 'Date'
 R_DESCRIPTION = 'Description'
 R_ITEMS = 'Items'
 R_PHONENUMBER = 'PhoneNumber'
