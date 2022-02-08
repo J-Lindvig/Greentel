@@ -41,7 +41,7 @@ PL_TYPE_VAL = ''
 
 # Response Keys and Values
 R_BALANCE = 'Balance'
-R_CALLS_TALKS = 'Opkald og samtaler'
+R_CALLS_TALKS = 'Opkald'
 R_CONSUMPTION = 'Consumption'
 R_DATA = 'Data'
 R_DATE = 'Date'

@@ -197,6 +197,9 @@ class greentelClient:
 					groupName = STR_TALK
 					Qty = Qty * 3600
 
+				_LOGGER.debug("[" + groupName + " ] : " + str(Qty))
+#				self._packageAndConsumption[phoneNo][STR_PACKAGE][groupName] = 1
+
 				self._packageAndConsumption[phoneNo][STR_PACKAGE][groupName] = int(Qty)
 
 	# Get a users consumption in the current month
@@ -221,7 +224,9 @@ class greentelClient:
 			# Loop through the different elements of consumption
 			for group in r[R_DATA][R_CONSUMPTION][R_ITEMS]:
 				# Extract the name and quantity of the consumption
-				groupName = group[R_DESCRIPTION]
+#				groupName = group[R_DESCRIPTION]
+				groupName = group[R_DESCRIPTION].split()[0]
+				_LOGGER.debug("Groupname: '" + groupName + "'")
 				Qty = group[R_QUANTITY]
 				# Ignore "Abonnement"
 				if groupName != R_SUBSCRIPTION_DK:
@@ -231,11 +236,14 @@ class greentelClient:
 						groupName = STR_TALK
 						h, m, s = Qty.split(':')
 						Qty = int(h) * 3600 + int(m) * 60 + int(s)
+						_LOGGER.debug("TALE: " + str(Qty))
 					elif groupName == R_DATA:
 						lastestDate = group[R_ITEMS][-1][R_DATE]
 						self._packageAndConsumption[phoneNo][R_DATE] = lastestDate
 						_LOGGER.debug("[lastestDate " + str(phoneNo) + " ] : " + str(lastestDate))
 
+					_LOGGER.debug("[" + groupName + " ] : " + str(Qty))
+					
 					self._packageAndConsumption[phoneNo][STR_USED][groupName] = int(Qty)
 
 	def _getConsumption(self):
